@@ -1,0 +1,142 @@
+https://youtu.be/UT747DbSADg inicial
+https://youtu.be/i1IH3SiL23s final
+
+Etapas Realizadas:
+1. Preparação do Ambiente
+Instalação do MoviePy versão 1.0.3:
+
+ 
+ 
+pip install moviepy==1.0.3
+Instalação do FFmpeg:
+
+O MoviePy depende do FFmpeg para manipulação de arquivos de mídia.
+Certifique-se de que o FFmpeg está instalado e configurado no PATH do sistema.
+Importação das Bibliotecas Necessárias:
+
+python
+ 
+from moviepy.editor import VideoFileClip, concatenate_videoclips, vfx
+import numpy as np
+2. Gravação do Vídeo
+Criação do Vídeo Original:
+Gravei um vídeo lendo o texto fornecido.
+Optei por não mostrar o rosto, utilizando uma imagem de fundo adequada.
+Certifiquei-me de que o áudio foi capturado com clareza.
+3. Carregamento e Análise do Vídeo
+Carregamento do Vídeo com o MoviePy:
+
+python
+ 
+video = VideoFileClip("input_video.mp4")
+Obtenção da Duração do Vídeo:
+
+python
+ 
+video_duration = video.duration
+print(f"Duração do vídeo: {video_duration} segundos")
+4. Processamento dos Segmentos de Vídeo
+Configuração dos Parâmetros:
+
+python
+ 
+segment_duration = 20  # Duração de cada segmento para inversão de imagem
+Divisão do Vídeo em Segmentos de 20 Segundos e Aplicação da Inversão:
+
+python
+ 
+# Lista para armazenar os clipes de vídeo processados
+video_clips = []
+
+# Número de segmentos baseados na duração total
+num_segments = int(np.ceil(video_duration / segment_duration))
+
+for i in range(num_segments):
+    start_time = i * segment_duration
+    end_time = min((i + 1) * segment_duration, video_duration)
+    clip = video.subclip(start_time, end_time)
+    
+    # Inverter a imagem a cada 20 segundos
+    if i % 2 == 0:
+        clip = clip.fx(vfx.mirror_x)
+    
+    video_clips.append(clip)
+Concatenar os Clipes Processados:
+
+python
+ 
+processed_video = concatenate_videoclips(video_clips)
+5. Processamento do Áudio
+Extração do Áudio do Vídeo Original:
+
+python
+ 
+audio = video.audio
+Definição dos Intervalos de Volume e Níveis Correspondentes:
+
+python
+ 
+volume_intervals = [0, 30, 60, 90, 120, video_duration - 10]
+volume_levels = [1.0, 0.5, 0.25, 0.125, 0.0625, 0.0]
+Função para Ajustar o Volume ao Longo do Tempo:
+
+python
+ 
+def adjust_volume(get_frame, t):
+    frame = get_frame(t)
+    t = np.array(t)  # Garantir que t é um array NumPy
+    volume = np.zeros_like(t, dtype=float)
+
+    for i in range(len(volume_intervals) - 1):
+        # Criar uma máscara booleana para os tempos que estão no intervalo
+        mask = (volume_intervals[i] <= t) & (t < volume_intervals[i + 1])
+        volume[mask] = volume_levels[i]
+
+    # Caso t >= volume_intervals[-1]
+    mask = t >= volume_intervals[-1]
+    volume[mask] = volume_levels[-1]
+
+    # Ajustar a forma do volume para multiplicação correta
+    if frame.ndim == 1:
+        # Áudio mono
+        return volume * frame
+    else:
+        # Áudio estéreo ou mais canais
+        return (volume[:, np.newaxis]) * frame
+Aplicação do Ajuste de Volume ao Áudio:
+
+python
+ 
+adjusted_audio = audio.fl(adjust_volume)
+Atualização do Áudio no Vídeo Processado:
+
+python
+ 
+processed_video = processed_video.set_audio(adjusted_audio)
+6. Reorganização dos Segmentos do Vídeo
+Criação dos Subclipes Necessários:
+
+python
+ 
+# Clipes específicos conforme requisitos
+clip_before_60 = processed_video.subclip(0, 60)
+clip_60_to_80 = processed_video.subclip(60, 80)
+clip_after_80 = processed_video.subclip(80, processed_video.duration)
+Concatenar os Clipes na Nova Ordem:
+
+python
+ 
+final_video = concatenate_videoclips([clip_before_60, clip_after_80, clip_60_to_80])
+7. Exportação do Vídeo Final
+Exportação com os Codecs Adequados:
+
+python
+ 
+final_video.write_videofile("output_video.mp4", codec="libx264", audio_codec="aac")
+8. Testes e Verificações
+Reprodução do Vídeo Final:
+
+Verifiquei se a imagem inverte a cada 20 segundos.
+Confirmei que o volume do áudio diminui gradativamente a cada 30 segundos.
+Assegurei que os últimos 10 segundos estão em silêncio.
+Certifiquei-me de que o segmento de 60s a 80s foi movido para o final.
